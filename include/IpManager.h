@@ -6,6 +6,7 @@
 #define IN
 #define OUT
 
+#pragma pack(push, 1)
 class IpManager {
     public: // public static constants
         static const size_t LENGTH = 4;
@@ -36,4 +37,5 @@ class IpManager {
         static void printIpAddress(IN const char *prefix, IN uint8_t *ipAddress);
         void printIpAddress(IN const char *prefix);
 };
+#pragma pack(pop)
 #endif

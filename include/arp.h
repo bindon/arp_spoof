@@ -21,31 +21,31 @@
 
 // ARP Session Node
 typedef struct _ArpSession {
-    uint8_t senderMacAddress[ARP_HARDWARE_LENGTH_ETHERNET];
-    uint8_t targetMacAddress[ARP_HARDWARE_LENGTH_ETHERNET];
-    uint8_t senderIpAddress[ARP_PROTOCOL_LENGTH_IP];
-    uint8_t targetIpAddress[ARP_PROTOCOL_LENGTH_IP];
+    MacManager senderMacAddress;
+    MacManager targetMacAddress;
+    IpManager  senderIpAddress;
+    IpManager  targetIpAddress;
 } ArpSession;
 
 #pragma pack(push, 1)
 // Ethernet Header Structure
 typedef struct _EthernetStructure {
-    uint8_t  destinationMacAddress[6];
-    uint8_t  sourceMacAddress[6];
+    MacManager destinationMacAddress;
+    MacManager sourceMacAddress;
     uint16_t type;
 } EthernetStructure;
 
 // ARP Packet Structure
 typedef struct _ArpStructure {
-    uint16_t hardwareType;
-    uint16_t protocolType;
-    uint8_t  hardwareLength;
-    uint8_t  protocolLength;
-    uint16_t operationCode;
-    uint8_t  senderHardwareAddress[ARP_HARDWARE_LENGTH_ETHERNET];
-    uint8_t  senderProtocolAddress[ARP_PROTOCOL_LENGTH_IP];
-    uint8_t  targetHardwareAddress[ARP_HARDWARE_LENGTH_ETHERNET];
-    uint8_t  targetProtocolAddress[ARP_PROTOCOL_LENGTH_IP];
+    uint16_t   hardwareType;
+    uint16_t   protocolType;
+    uint8_t    hardwareLength;
+    uint8_t    protocolLength;
+    uint16_t   operationCode;
+    MacManager senderHardwareAddress;
+    IpManager  senderProtocolAddress;
+    MacManager targetHardwareAddress;
+    IpManager  targetProtocolAddress;
 } ArpStructure;
 
 // Ethernet + ARP Packet Structure

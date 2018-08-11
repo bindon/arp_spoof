@@ -34,19 +34,19 @@ void IpManager::operator = (IN const uint8_t *ipAddress) {
 }
 
 bool IpManager::operator == (IN IpManager &ipManager) {
-    return memcmp(this->ipAddress, ipManager, LENGTH);
-}
-
-bool IpManager::operator == (IN const uint8_t *ipAddress) {
-    return memcmp(this->ipAddress, ipAddress, LENGTH);
-}
-
-bool IpManager::operator != (IN IpManager &ipManager) {
     return !memcmp(this->ipAddress, ipManager, LENGTH);
 }
 
-bool IpManager::operator != (IN const uint8_t *ipAddress) {
+bool IpManager::operator == (IN const uint8_t *ipAddress) {
     return !memcmp(this->ipAddress, ipAddress, LENGTH);
+}
+
+bool IpManager::operator != (IN IpManager &ipManager) {
+    return memcmp(this->ipAddress, ipManager, LENGTH);
+}
+
+bool IpManager::operator != (IN const uint8_t *ipAddress) {
+    return memcmp(this->ipAddress, ipAddress, LENGTH);
 }
 
 void IpManager::printIpAddress(IN const char *prefix, IN uint8_t *ipAddress) {

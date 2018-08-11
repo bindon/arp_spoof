@@ -47,7 +47,7 @@ int getLocalIpAddress(IN char *interfaceName, OUT IpManager &ipManager) {
     strncpy(interfaceRequest.ifr_name, interfaceName, IFNAMSIZ-1);
     ioctl(fileDescriptor, SIOCGIFADDR, &interfaceRequest);
 
-    ipManager = (uint8_t *)&((struct sockaddr_in *)&interfaceRequest.ifr_addr)->sin_addr;
+    ipManager = ((struct sockaddr_in *)&interfaceRequest.ifr_addr)->sin_addr;
     ipManager.printIpAddress("[*] Local IP  Address : ");
 
     ret = EXIT_SUCCESS;

@@ -6,6 +6,7 @@
 #define IN
 #define OUT
 
+#pragma pack(push, 1)
 class MacManager {
     public: // public static constants
         static const size_t LENGTH = 6;
@@ -33,5 +34,7 @@ class MacManager {
         static void printMacAddress(IN const char *prefix, IN uint8_t *macAddress);
         void printMacAddress(IN const char *macAddress);
         void setBroadcast();
+        bool isBroadcast();
 };
+#pragma pack(pop)
 #endif

