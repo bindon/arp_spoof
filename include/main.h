@@ -5,4 +5,7 @@
 #define IN
 #define OUT
 
+#include <MacManager.h>
+#include <IpManager.h>
+
 #endif

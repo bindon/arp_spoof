@@ -55,9 +55,9 @@ typedef struct _MergedStructure {
 } MergedStructure;
 #pragma pack(pop)
 
-int receiveSenderMacAddress(IN pcap_t *handle, IN uint8_t *senderIpAddress, OUT uint8_t *senderMacAddress);
-int getSenderMacAddress(IN pcap_t *handle, IN uint8_t *targetMacAddress, IN uint8_t *targetIpAddress, IN uint8_t *senderIpAddress, OUT uint8_t *senderMacAddress);
-int infectSender(IN pcap_t *handle, IN uint8_t *localMacAddress, IN ArpSession arpSession);
-int infectSender(IN pcap_t *handle, IN uint8_t *localMacAddress, IN ArpSession arpSession, IN int count);
+int receiveSenderMacAddress(IN pcap_t *handle, IN IpManager senderIpAddress, OUT MacManager &senderMacAddress);
+int getSenderMacAddress(IN pcap_t *handle, IN MacManager targetMacAddress, IN IpManager targetIpAddress, IN IpManager senderIpAddress, OUT MacManager &senderMacAddress);
+int infectSender(IN pcap_t *handle, IN MacManager localMacAddress, IN ArpSession arpSession);
+int infectSender(IN pcap_t *handle, IN MacManager localMacAddress, IN ArpSession arpSession, IN int count);
 
 #endif

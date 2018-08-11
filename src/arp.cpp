@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-int receiveSenderMacAddress(IN pcap_t *handle, IN uint8_t *senderIpAddress, OUT uint8_t *senderMacAddress) {
+int receiveSenderMacAddress(IN pcap_t *handle, IN IpManager senderIpAddress, OUT MacManager &senderMacAddress) {
     int waitCount = 20;
     int ret = EXIT_FAILURE;
 
@@ -21,21 +21,23 @@ int receiveSenderMacAddress(IN pcap_t *handle, IN uint8_t *senderIpAddress, OUT 
 
         // parse Ethernet in Datalink Layer
         MergedStructure *mergedPacket = (MergedStructure *)packet;
+        IpManager  senderIpAddress(mergedPacket->arpPacket.senderProtocolAddress);
+        MacManager destinationMacAddress(mergedPacket->ethernetPacket.destinationMacAddress);
+        MacManager sourceMacAddress(mergedPacket->ethernetPacket.sourceMacAddress);
 
         switch(ntohs(mergedPacket->ethernetPacket.type)) {
             case ETHERNET_TYPE_ARP: // value is 0x0806
                 if(!memcmp(mergedPacket->arpPacket.senderProtocolAddress, senderIpAddress, ARP_PROTOCOL_LENGTH_IP)) {
                     // Print Ethernet Packet
                     printf("[*] Ethernet Information\n");
-                    printMacAddress("  - Dest MAC : ", mergedPacket->ethernetPacket.destinationMacAddress);
-                    printMacAddress("  - Src  MAC : ", mergedPacket->ethernetPacket.sourceMacAddress);
-                    printf("  - Type     : [%04x]",    ntohs(mergedPacket->ethernetPacket.type));
-                    printf("\n");
+                    destinationMacAddress.printMacAddress("  - Dest MAC : ");
+                    sourceMacAddress.printMacAddress     ("  - Src  MAC : ");
+                    printf("  - Type     : [%04x]\n",    ntohs(mergedPacket->ethernetPacket.type));
 
                     // Print ARP Packet
                     printf("[*] ARP Information\n");
                     printArpPacketInfo(mergedPacket->arpPacket);
-                    memcpy(senderMacAddress, mergedPacket->arpPacket.senderHardwareAddress, ARP_HARDWARE_LENGTH_ETHERNET);
+                    senderMacAddress = mergedPacket->arpPacket.senderHardwareAddress;
                     printf("\n");
                     ret = EXIT_SUCCESS;
 
@@ -53,8 +55,8 @@ end:
 }
 
 int getSenderMacAddress(IN pcap_t *handle, 
-    IN uint8_t *targetMacAddress, IN uint8_t *targetIpAddress, 
-    IN uint8_t *senderIpAddress, OUT uint8_t *senderMacAddress) {
+    IN MacManager targetMacAddress, IN IpManager targetIpAddress, 
+    IN IpManager senderIpAddress, OUT MacManager &senderMacAddress) {
     int ret = EXIT_FAILURE;
     MergedStructure mergedPacket;
 
@@ -100,7 +102,7 @@ int getSenderMacAddress(IN pcap_t *handle,
 
         printf("[+] Get MAC Address\n");
         //memset(mergedPacket.arpPacket.senderHardwareAddress, 0x00, ARP_HARDWARE_LENGTH_ETHERNET);
-        if(receiveSenderMacAddress(handle, mergedPacket.arpPacket.targetProtocolAddress, senderMacAddress) == EXIT_SUCCESS) {
+        if(receiveSenderMacAddress(handle, senderIpAddress, senderMacAddress) == EXIT_SUCCESS) {
             break;
         }
     }
@@ -111,11 +113,11 @@ end:
     return ret;
 }
 
-int infectSender(IN pcap_t *handle, IN uint8_t *localMacAddress, IN ArpSession arpSession) {
+int infectSender(IN pcap_t *handle, IN MacManager localMacAddress, IN ArpSession arpSession) {
     return infectSender(handle, localMacAddress, arpSession, -1);
 }
 
-int infectSender(IN pcap_t *handle, IN uint8_t *localMacAddress, IN ArpSession arpSession, IN int count) {
+int infectSender(IN pcap_t *handle, IN MacManager localMacAddress, IN ArpSession arpSession, IN int count) {
     int ret = EXIT_FAILURE;
     struct in_addr laddr;
     MergedStructure mergedStructure;
