@@ -1,7 +1,5 @@
 #ifndef _ARP_H
 #define _ARP_H
-#define IN
-#define OUT
 #include <pcap.h>
 #include <main.h>
 #include <stdint.h>

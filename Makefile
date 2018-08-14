@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -lpcap -pthread
+LDLIBS = -lpcap -pthread
 TARGET = arp_spoof
 
 SRC_DIR = src
@@ -15,11 +15,11 @@ HEADERS = $(wildcard $(INCLUDE_DIR)/*.h)
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(BINARY_DIR)
 	@echo "[+] Make Binary File"
-	@$(CC) $(CFLAGS) -o $(BINARY_DIR)/$@ $(OBJECTS)
+	@$(CC) $(LDLIBS) -o $(BINARY_DIR)/$@ $(OBJECTS)
 
 %.o: %.cpp $(HEADERS)
 	@echo "[+] Compile $< File"
-	@$(CC) $(CFLAGS) -c -o $@ $< -I$(INCLUDE_DIR)
+	@$(CC) $(LDLIBS) -c -o $@ $< -I$(INCLUDE_DIR)
 
 clean:
 	@rm -f $(BINARY_DIR)/$(TARGET)
